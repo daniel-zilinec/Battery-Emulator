@@ -1,5 +1,4 @@
 #include "../inverter/INVERTERS.h"
-#include "BMW-SBOX.h"
 #include "Shunt.h"
 
 CanShunt* shunt = nullptr;
@@ -14,10 +13,6 @@ void setup_shunt() {
     case ShuntType::None:
       shunt = nullptr;
       return;
-    case ShuntType::BmwSbox:
-      shunt = new BmwSbox();
-      shunt->setup();
-      break;
     case ShuntType::Inverter:
       if (inverter && inverter->provides_shunt())
         inverter->enable_shunt();
@@ -29,7 +24,6 @@ void setup_shunt() {
 extern std::vector<ShuntType> supported_shunt_types() {
   std::vector<ShuntType> types;
   types.push_back(ShuntType::None);
-  types.push_back(ShuntType::BmwSbox);
 
   if (inverter && inverter->provides_shunt())
     types.push_back(ShuntType::Inverter);
@@ -41,8 +35,6 @@ extern const char* name_for_shunt_type(ShuntType type) {
   switch (type) {
     case ShuntType::None:
       return "None";
-    case ShuntType::BmwSbox:
-      return BmwSbox::Name;
     case ShuntType::Inverter:
       return "Using inverter values";
     default:

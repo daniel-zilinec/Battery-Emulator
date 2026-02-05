@@ -9,7 +9,7 @@
 
 #include <vector>
 
-enum class ShuntType { None = 0, BmwSbox = 1, Inverter = 2, Highest };
+enum class ShuntType { None = 0, Inverter = 2, Highest };
 
 class CanShunt : public Transmitter, CanReceiver {
  public:

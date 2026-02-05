@@ -124,46 +124,22 @@ void KostalInverterProtocol::update_values() {
 
   float2frame(CYCLIC_DATA, (float)average_temperature_dC / 10, 14);
 
-  //Only perform this operation when Shunt is in used and set to BMW SBOX
-  if (user_selected_shunt_type == ShuntType::BmwSbox) {
-    float2frame(CYCLIC_DATA, (float)(datalayer.shunt.measured_amperage_mA / 100) / 10, 18);
-    float2frame(CYCLIC_DATA, (float)(datalayer.shunt.measured_avg1S_amperage_mA / 100) / 10, 22);
+  float2frame(CYCLIC_DATA, (float)datalayer.battery.status.reported_current_dA / 10, 18);  // Last current
+  float2frame(CYCLIC_DATA, (float)datalayer.battery.status.reported_current_dA / 10,
+              22);  // Should be Avg current(1s)
 
-    if (datalayer.shunt.contactors_engaged) {
-      CYCLIC_DATA[59] = 0;
-    } else {
-      CYCLIC_DATA[59] = 2;
-    }
+  // Close contactors after 7 battery info frames requested
+  if (f2_startup_count > 7) {
+    setInverterAllowsContactorClosing(true);
+    dbg_message("inverter_allows_contactor_closing -> true (info frame)");
+  }
 
-    if (datalayer.shunt.precharging || datalayer.shunt.contactors_engaged) {
-      CYCLIC_DATA[56] = 1;
-      float2frame(CYCLIC_DATA, (float)datalayer.battery.status.max_discharge_current_dA / 10,
-                  26);  // Maximum discharge current
-      float2frame(CYCLIC_DATA, (float)datalayer.battery.status.max_charge_current_dA / 10,
-                  34);  // Maximum charge current
-    } else {
-      CYCLIC_DATA[56] = 0;
-      float2frame(CYCLIC_DATA, 0.0, 26);
-      float2frame(CYCLIC_DATA, 0.0, 34);
-    }
+  if (datalayer.system.status.inverter_allows_contactor_closing) {
+    CYCLIC_DATA[56] = 0x01;
+    CYCLIC_DATA[59] = 0x00;
   } else {
-    float2frame(CYCLIC_DATA, (float)datalayer.battery.status.reported_current_dA / 10, 18);  // Last current
-    float2frame(CYCLIC_DATA, (float)datalayer.battery.status.reported_current_dA / 10,
-                22);  // Should be Avg current(1s)
-
-    // Close contactors after 7 battery info frames requested
-    if (f2_startup_count > 7) {
-      setInverterAllowsContactorClosing(true);
-      dbg_message("inverter_allows_contactor_closing -> true (info frame)");
-    }
-
-    if (datalayer.system.status.inverter_allows_contactor_closing) {
-      CYCLIC_DATA[56] = 0x01;
-      CYCLIC_DATA[59] = 0x00;
-    } else {
-      CYCLIC_DATA[56] = 0x00;
-      CYCLIC_DATA[59] = 0x02;
-    }
+    CYCLIC_DATA[56] = 0x00;
+    CYCLIC_DATA[59] = 0x02;
   }
 
   float2frame(CYCLIC_DATA, (float)datalayer.battery.status.max_discharge_current_dA / 10, 26);
