@@ -1,5 +1,6 @@
 #include "TEST-FAKE-BATTERY.h"
 #include <Arduino.h>
+#include <math.h>
 #include "../datalayer/datalayer.h"
 #include "../devboard/utils/logging.h"
 
@@ -18,9 +19,16 @@ void TestFakeBattery::
 
   datalayer_battery->status.remaining_capacity_Wh = 15000;  // 15kWh
 
-  datalayer_battery->status.cell_max_voltage_mV = 3596;
+  // Make all cell voltages follow a sine wave: 15s period, 3700mV center, 400mV amplitude
+  const float period_ms = 15000.0f;
+  const float center_mv = 3700.0f;
+  const float amplitude_mv = 400.0f;
+  const float phase = (2.0f * PI * (float)millis()) / period_ms;
+  const float cell_mv_f = center_mv + amplitude_mv * sinf(phase);
+  const uint16_t cell_mv = (uint16_t)roundf(cell_mv_f);
 
-  datalayer_battery->status.cell_min_voltage_mV = 3500;
+  datalayer_battery->status.cell_max_voltage_mV = cell_mv + random(0, 100);
+  datalayer_battery->status.cell_min_voltage_mV = cell_mv;
 
   datalayer_battery->status.temperature_min_dC = 50;  // 5.0*C
 
@@ -31,7 +39,7 @@ void TestFakeBattery::
   datalayer_battery->status.max_charge_power_W = 5000;  // 5kW
 
   for (int i = 0; i < 97; ++i) {
-    datalayer_battery->status.cell_voltages_mV[i] = 3700 + random(-20, 21);
+    datalayer_battery->status.cell_voltages_mV[i] = cell_mv + random(0, 100);
   }
 
   //Fake that we get CAN messages
