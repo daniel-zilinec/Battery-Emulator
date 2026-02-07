@@ -533,20 +533,10 @@ void core_loop(void*) {
       update_calculated_values(currentMillis);
       update_machineryprotection();  // Check safeties
 
-      // Update LED backpack SOC display
+      // Update LED backpack min cell voltage display
       if (led_backpack.is_initialized() && battery) {
-        // reported_soc is in 0.01% units (10000 = 100%)
-        uint8_t soc_percent = (datalayer.battery.status.reported_soc / 100);
-        if (soc_percent > 100) soc_percent = 100;
-        
-        // Color logic: Green 0-50%, Yellow 50-75%, Red 75-100%
-        uint8_t soc_color = 0;  // 0=green, 1=red, 2=yellow
-        if (soc_percent >= 75) {
-          soc_color = 1;  // Red
-        } else if (soc_percent >= 50) {
-          soc_color = 2;  // Yellow
-        }
-        led_backpack.update_soc_display(soc_percent, soc_color);
+        const uint16_t min_cell_mV = datalayer.battery.status.cell_min_voltage_mV;
+        led_backpack.update_min_cell_voltage_display(min_cell_mV, 0);
       }
 
       // Update values heading towards inverter

@@ -89,6 +89,57 @@ void LedBackpack24::update_soc_display(uint8_t percent, uint8_t color) {
   xSemaphoreGive(i2c_mutex);
 }
 
+void LedBackpack24::update_min_cell_voltage_display(uint16_t millivolts, uint8_t color) {
+  if (!initialized || i2c_mutex == nullptr) return;
+
+  const uint16_t min_mv = 2800;
+  const uint16_t max_mv = 4200;
+  static uint16_t min_ever_mv = 0xFFFF;  // Track minimum voltage ever seen
+
+  // Update minimum ever seen
+  if (millivolts < min_ever_mv) {
+    min_ever_mv = millivolts;
+  }
+
+  // Map current voltage to bar count (green bars)
+  uint8_t current_bar_count = 1;
+  if (millivolts <= min_mv) {
+    current_bar_count = 1;
+  } else if (millivolts >= max_mv) {
+    current_bar_count = 24;
+  } else {
+    const float ratio = float(millivolts - min_mv) / float(max_mv - min_mv);
+    current_bar_count = 1 + (uint8_t)roundf(ratio * 23.0f);
+  }
+
+  // Map minimum ever seen to bar position (red indicator)
+  uint8_t min_bar_pos = 0;
+  if (min_ever_mv <= min_mv) {
+    min_bar_pos = 0;
+  } else if (min_ever_mv >= max_mv) {
+    min_bar_pos = 23;
+  } else {
+    const float ratio = float(min_ever_mv - min_mv) / float(max_mv - min_mv);
+    min_bar_pos = (uint8_t)roundf(ratio * 23.0f);
+  }
+
+  xSemaphoreTake(i2c_mutex, portMAX_DELAY);
+
+  bargraph.clear();
+
+  // Light green bars for current voltage
+  for (uint8_t i = 0; i < current_bar_count; i++) {
+    bargraph.setBar(i, LED_GREEN);
+  }
+
+  // Overlay red bar for minimum ever seen
+  bargraph.setBar(min_bar_pos, LED_RED);
+
+  bargraph.writeDisplay();
+
+  xSemaphoreGive(i2c_mutex);
+}
+
 void LedBackpack24::set_bar(uint8_t bar_num, bool state, uint8_t color) {
   if (!initialized || bar_num > 23 || i2c_mutex == nullptr) return;
 

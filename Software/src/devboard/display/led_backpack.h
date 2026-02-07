@@ -7,9 +7,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-// I2C pins (custom pins for ESP32)
+// I2C pins (custom pins per board)
+#if defined(HW_LILYGO2CAN)
+#define LED_BACKPACK_SDA 0
+#define LED_BACKPACK_SCL 1
+#else
 #define LED_BACKPACK_SDA 18
 #define LED_BACKPACK_SCL 25
+#endif
 #define LED_BACKPACK_I2C_ADDRESS 0x70
 
 // Forward declaration
@@ -31,6 +36,9 @@ class LedBackpack24 {
 
   // Update bargraph: percent (0-100), color: 0=green, 1=red, 2=yellow (for bicolor)
   void update_soc_display(uint8_t percent, uint8_t color = 0);
+
+  // Update bargraph: 2800mV -> 1 bar, 4200mV -> 24 bars
+  void update_min_cell_voltage_display(uint16_t millivolts, uint8_t color = 0);
 
   // Set individual bars (0-23 for 24-bar unit)
   void set_bar(uint8_t bar_num, bool state, uint8_t color = 0);
