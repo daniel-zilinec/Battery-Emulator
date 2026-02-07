@@ -57,7 +57,7 @@ const battery_chemistry_enum battery_chemistry_default = battery_chemistry_enum:
 
 battery_chemistry_enum user_selected_battery_chemistry = battery_chemistry_default;
 
-BatteryType user_selected_battery_type = BatteryType::None;
+BatteryType user_selected_battery_type = BatteryType::TestFake;  // Default to test battery
 bool user_selected_second_battery = false;
 bool user_selected_triple_battery = false;
 

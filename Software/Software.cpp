@@ -5,6 +5,7 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 
 #include "src/battery/BATTERIES.h"
 #include "src/charger/CHARGERS.h"
@@ -17,6 +18,7 @@
 #include "src/communication/rs485/comm_rs485.h"
 #include "src/datalayer/datalayer.h"
 #include "src/devboard/display/display.h"
+#include "src/devboard/display/led_backpack.h"
 #include "src/devboard/mqtt/mqtt.h"
 #include "src/devboard/sdcard/sdcard.h"
 #include "src/devboard/utils/events.h"
@@ -55,6 +57,9 @@ TaskHandle_t mqtt_loop_task;
 Watchdog mqtt_loop_watchdog;
 
 Logging logging;
+
+// I2C Mutex for thread-safe I2C communication
+SemaphoreHandle_t i2c_mutex = nullptr;
 
 std::string mqtt_user;      //TODO, move?
 std::string mqtt_password;  //TODO, move?
@@ -528,6 +533,22 @@ void core_loop(void*) {
       update_calculated_values(currentMillis);
       update_machineryprotection();  // Check safeties
 
+      // Update LED backpack SOC display
+      if (led_backpack.is_initialized() && battery) {
+        // reported_soc is in 0.01% units (10000 = 100%)
+        uint8_t soc_percent = (datalayer.battery.status.reported_soc / 100);
+        if (soc_percent > 100) soc_percent = 100;
+        
+        // Color logic: Green 0-50%, Yellow 50-75%, Red 75-100%
+        uint8_t soc_color = 0;  // 0=green, 1=red, 2=yellow
+        if (soc_percent >= 75) {
+          soc_color = 1;  // Red
+        } else if (soc_percent >= 50) {
+          soc_color = 2;  // Yellow
+        }
+        led_backpack.update_soc_display(soc_percent, soc_color);
+      }
+
       // Update values heading towards inverter
       if (inverter) {
         inverter->update_values();
@@ -594,6 +615,10 @@ void setup() {
   init_hal();
 
   init_serial();
+  
+  // Confirm serial is working
+  Serial.println("\n=== Battery Emulator Startup ===");
+  Serial.flush();  // Ensure output is sent
 
   // We print this after setting up serial, so that is also printed if configured to do so
   DEBUG_PRINTF("Battery emulator %s build " __DATE__ " " __TIME__ "\n", version_number);
@@ -601,6 +626,8 @@ void setup() {
   init_events();
 
   init_stored_settings();
+  Serial.println("Settings loaded");
+  Serial.flush();
 
   if (wifi_enabled) {
     xTaskCreatePinnedToCore((TaskFunction_t)&connectivity_loop, "connectivity_loop", 4096, NULL, TASK_CONNECTIVITY_PRIO,
@@ -622,6 +649,37 @@ void setup() {
   setup_inverter();
   setup_battery();
   setup_shunt();
+  
+  Serial.println("Battery and accessories initialized");
+  Serial.flush();
+
+  // Initialize I2C mutex for thread-safe I2C communication
+  i2c_mutex = xSemaphoreCreateMutex();
+  if (i2c_mutex == nullptr) {
+    Serial.println("ERROR: Failed to create I2C mutex!");
+    Serial.flush();
+    DEBUG_PRINTF("ERROR: Failed to create I2C mutex!\n");
+  } else {
+    Serial.println("I2C mutex created successfully");
+    Serial.flush();
+  }
+
+  // Initialize LED Backpack for SOC display
+  Serial.println("Initializing LED Backpack...");
+  Serial.flush();
+  
+  if (led_backpack.begin()) {
+    Serial.println("LED Backpack initialized, running test pattern...");
+    Serial.flush();
+    DEBUG_PRINTF("LED Backpack initialized successfully\n");
+    led_backpack.test_pattern();  // Quick test to verify it works
+    Serial.println("Test pattern complete");
+    Serial.flush();
+  } else {
+    Serial.println("WARNING: LED Backpack initialization failed");
+    Serial.flush();
+    DEBUG_PRINTF("WARNING: LED Backpack initialization failed\n");
+  }
 
   // Init CAN only after any CAN receivers have had a chance to register.
   init_CAN();
@@ -666,6 +724,8 @@ void setup() {
   xTaskCreatePinnedToCore((TaskFunction_t)&core_loop, "core_loop", 4096, NULL, TASK_CORE_PRIO, &main_loop_task,
                           esp32hal->CORE_FUNCTION_CORE());
 
+  Serial.println("Setup complete! Tasks started, entering loop()");
+  Serial.flush();
   DEBUG_PRINTF("Setup complete!\n");
 }
 
