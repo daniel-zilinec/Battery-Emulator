@@ -163,6 +163,9 @@ class Esp32Hal {
   // Equipment stop pin
   virtual gpio_num_t EQUIPMENT_STOP_PIN() { return GPIO_NUM_NC; }
 
+  // LED Backpack reset button pin
+  virtual gpio_num_t LED_BACKPACK_RESET_PIN() { return GPIO_NUM_NC; }
+
   // Battery wake up pins
   virtual gpio_num_t WUP_PIN1() { return GPIO_NUM_NC; }
   virtual gpio_num_t WUP_PIN2() { return GPIO_NUM_NC; }

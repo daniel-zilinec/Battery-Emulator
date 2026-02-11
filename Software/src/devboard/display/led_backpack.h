@@ -6,11 +6,12 @@
 #include <Adafruit_GFX.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "../utils/debounce_button.h"
 
 // I2C pins (custom pins per board)
 #if defined(HW_LILYGO2CAN)
-#define LED_BACKPACK_SDA 0
-#define LED_BACKPACK_SCL 1
+#define LED_BACKPACK_SDA 1
+#define LED_BACKPACK_SCL 2
 #else
 #define LED_BACKPACK_SDA 18
 #define LED_BACKPACK_SCL 25
@@ -26,6 +27,9 @@ class LedBackpack24 {
   bool initialized = false;
   uint8_t last_bar_count = 0;
   uint8_t last_color = 0;  // 0=green, 1=red, 2=yellow
+  uint16_t min_ever_mv = 0xFFFF;  // Track minimum cell voltage ever seen
+  DebouncedButton reset_button;  // Reset button for ever-seen minimum
+  bool reset_button_initialized = false;  // Track if reset button was successfully configured
 
  public:
   LedBackpack24();
@@ -48,6 +52,15 @@ class LedBackpack24 {
 
   // Test pattern (light all bars)
   void test_pattern();
+
+  // Reset the ever-seen minimum cell voltage
+  void reset_min_cell_voltage() { min_ever_mv = 0xFFFF; }
+
+  // Initialize the reset button
+  bool init_reset_button();
+
+  // Monitor the reset button (call this in main loop)
+  void monitor_reset_button();
 
   bool is_initialized() { return initialized; }
 };

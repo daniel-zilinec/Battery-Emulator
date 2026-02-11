@@ -1,8 +1,12 @@
 #include "led_backpack.h"
 #include "../utils/logging.h"
+#include "../hal/hal.h"
 
 // Global backpack instance
 LedBackpack24 led_backpack;
+
+// Button parameters
+const unsigned long led_button_debounce_duration = 50;  // 50ms for debouncing
 
 LedBackpack24::LedBackpack24() : initialized(false), last_bar_count(0), last_color(0) {
 }
@@ -94,7 +98,6 @@ void LedBackpack24::update_min_cell_voltage_display(uint16_t millivolts, uint8_t
 
   const uint16_t min_mv = 2800;
   const uint16_t max_mv = 4200;
-  static uint16_t min_ever_mv = 0xFFFF;  // Track minimum voltage ever seen
 
   // Update minimum ever seen
   if (millivolts < min_ever_mv) {
@@ -200,4 +203,48 @@ void LedBackpack24::test_pattern() {
   bargraph.writeDisplay();
 
   xSemaphoreGive(i2c_mutex);
+}
+
+bool LedBackpack24::init_reset_button() {
+  if (!initialized) {
+    return false;
+  }
+
+  auto pin = esp32hal->LED_BACKPACK_RESET_PIN();
+  
+  // If pin is not configured, that's OK - just don't enable the button
+  if (pin == GPIO_NUM_NC) {
+    reset_button_initialized = false;
+    return true;
+  }
+
+  if (!esp32hal->alloc_pins("LED Backpack Reset", pin)) {
+    DEBUG_PRINTF("Failed to allocate LED Backpack Reset button pin\n");
+    reset_button_initialized = false;
+    return false;
+  }
+
+  // Initialize with NC (Normally Closed) switch type
+  initDebouncedButton(reset_button, pin, NC, led_button_debounce_duration);
+  
+  // Re-enable pull-up after initDebouncedButton (which resets pin mode to INPUT without pull-up)
+  pinMode(pin, INPUT_PULLUP);
+  
+  reset_button_initialized = true;
+  Serial.println("LED Backpack reset button initialized with pull-up enabled");
+  return true;
+}
+
+void LedBackpack24::monitor_reset_button() {
+  if (!initialized || !reset_button_initialized) {
+    return;
+  }
+
+  unsigned long timeSincePress = 0;
+  ButtonState button_state = debounceButton(reset_button, timeSincePress);
+
+  if (button_state == PRESSED) {
+    reset_min_cell_voltage();
+    Serial.println("LED Backpack: Reset ever-seen minimum cell voltage");
+  }
 }

@@ -477,6 +477,7 @@ void core_loop(void*) {
     START_TIME_MEASUREMENT(comm);
 
     monitor_equipment_stop_button();
+    led_backpack.monitor_reset_button();
 
     // Input, Runs as fast as possible
     receive_can();    // Receive CAN messages
@@ -665,6 +666,7 @@ void setup() {
     led_backpack.test_pattern();  // Quick test to verify it works
     Serial.println("Test pattern complete");
     Serial.flush();
+    led_backpack.init_reset_button();  // Initialize reset button if available
   } else {
     Serial.println("WARNING: LED Backpack initialization failed");
     Serial.flush();
