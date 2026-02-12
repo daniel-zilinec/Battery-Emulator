@@ -96,9 +96,6 @@ void LedBackpack24::update_soc_display(uint8_t percent, uint8_t color) {
 void LedBackpack24::update_min_cell_voltage_display(uint16_t millivolts, uint8_t color) {
   if (!initialized || i2c_mutex == nullptr) return;
 
-  const uint16_t min_mv = 2800;
-  const uint16_t max_mv = 4200;
-
   // Update minimum ever seen
   if (millivolts < min_ever_mv) {
     min_ever_mv = millivolts;
@@ -106,23 +103,23 @@ void LedBackpack24::update_min_cell_voltage_display(uint16_t millivolts, uint8_t
 
   // Map current voltage to bar count (green bars)
   uint8_t current_bar_count = 1;
-  if (millivolts <= min_mv) {
+  if (millivolts <= MIN_MV) {
     current_bar_count = 1;
-  } else if (millivolts >= max_mv) {
+  } else if (millivolts >= MAX_MV) {
     current_bar_count = 24;
   } else {
-    const float ratio = float(millivolts - min_mv) / float(max_mv - min_mv);
+    const float ratio = float(millivolts - MIN_MV) / float(MAX_MV - MIN_MV);
     current_bar_count = 1 + (uint8_t)roundf(ratio * 23.0f);
   }
 
   // Map minimum ever seen to bar position (red indicator)
   uint8_t min_bar_pos = 0;
-  if (min_ever_mv <= min_mv) {
+  if (min_ever_mv <= MIN_MV) {
     min_bar_pos = 0;
-  } else if (min_ever_mv >= max_mv) {
+  } else if (min_ever_mv >= MAX_MV) {
     min_bar_pos = 23;
   } else {
-    const float ratio = float(min_ever_mv - min_mv) / float(max_mv - min_mv);
+    const float ratio = float(min_ever_mv - MIN_MV) / float(MAX_MV - MIN_MV);
     min_bar_pos = (uint8_t)roundf(ratio * 23.0f);
   }
 

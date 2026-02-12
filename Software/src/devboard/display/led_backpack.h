@@ -8,6 +8,10 @@
 #include "freertos/semphr.h"
 #include "../utils/debounce_button.h"
 
+// Voltage range for cell voltage display (2800mV to 4100mV mapped to 1-24 bars)
+#define MIN_MV 2800
+#define MAX_MV 4100
+
 // I2C pins (custom pins per board)
 #if defined(HW_LILYGO2CAN)
 #define LED_BACKPACK_SDA 1
